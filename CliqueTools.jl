@@ -61,7 +61,7 @@ Removes node `k` from `clique_o` and stores result in `clique_n`. Node `k` corre
 # Arguments
 -`clique_n::clique_type` : should have the correct dimensions.
 -`clique_o::clique_type` : will not be modified.
--`k::Int64` : node to remove in the total system mapping.
+-`k::Int64` : node to remove, expressed in the total system mapping.
 """
 function RemoveNode!(clique_n::clique_type, clique_o::clique_type, k::Int64)
     Ln = clique_o.L - 1

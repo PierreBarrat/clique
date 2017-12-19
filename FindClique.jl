@@ -1,6 +1,6 @@
-include("../Misc/AlignmentStat.jl")
-include("../MCMC/MCMCSwap.jl")
-include("../Clique/CliqueTools.jl")
+include("./CliqueAlignmentStat.jl")
+include("./CliqueMCMCSwap.jl")
+include("./CliqueTools.jl")
 
 
 """

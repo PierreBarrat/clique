@@ -15,41 +15,6 @@ function CreateZeroClique(L::Int64, q::Int64, M::Int64; Lmap = L)
 end
 
 
-#
-# Adds node k to clique_o, modifying clique_n
-# Information on sample and couplings is taken from clique_ref, which should represent the whole system
-function AddNode!(clique_n::clique_type, clique_o::clique_type, clique_ref::clique_type, k::Int64)
-    Ln = clique_o.L + 1
-    q = clique_o.q
-    clique_n.L = Ln
-    clique_n.q = q
-
-    # List of nodes
-    clique_n.nodes[1:(Ln-1)] = copy(clique_o.nodes)
-    clique_n.nodes[Ln] = k
-    sort!(clique_n.nodes)
-
-    # Dealing with map
-    pos_k = findin(clique_n.nodes, k)[1]
-    clique_n.map = copy(clique_o.map)
-    clique_n.map[k] = pos_k
-    for l in (k+1):size(clique_n.map)[1]
-        if clique_n.map[l] !=0 
-            clique_n.map[l] += 1
-        end
-    end
-
-    # Updating sample and J
-    clique_n.sample = clique_ref.sample[:,clique_n.nodes]
-    for pos_i in 1:Ln
-        for pos_j in (pos_i+1):Ln
-            i = clique_n.nodes[pos_i]
-            j = clique_n.nodes[pos_j]
-            clique_n.J[(pos_i-1)*q + (1:q), (pos_j-1)*q + (1:q)] = clique_ref.J[(i-1)*q + (1:q), (j-1)*q + (1:q)]
-            clique_n.J[(pos_j-1)*q + (1:q), (pos_i-1)*q + (1:q)] = clique_ref.J[(j-1)*q + (1:q), (i-1)*q + (1:q)]
-        end
-    end
-end 
 
 
 
@@ -131,8 +96,8 @@ function RemoveNode(clique_o::clique_type, k::Int64)
     return clique_n
 end
 
-#
-#
+"""
+"""
 function CliqueCopy(clique::clique_type)
 
     clique_out = CreateZeroClique(clique.L,clique.q,size(clique.sample)[1])
@@ -148,64 +113,42 @@ end
 """
     CliqueCorr!(i::Int64, j::Int64, clique::clique_type)
 
-Computes frobenius norm of correlation between `i` and `j` in `clique`.
+Returns pairwise frequencies for columns `i` and `j` of `clique.sample`. Output is a `qxq` matrix.
 """
-function CliqueCorr(i::Int64, j::Int64, clique::clique_type)
+function PairFreq(i::Int64, j::Int64, clique::clique_type)
 
     (f_1,f_2) = ReturnPairFreqs(i,j,clique.sample, q=clique.q)
     q = clique.q
 
     return f_2[0*q+(1:q), 1*q+(1:q)]
 end
-    # if exclude_gap
-    #     Fcij = sqrt(sum((f_2[0*q + (2:q), 1*q + (2:q)] - f_1[0*q + (2:q)] * f_1[1*q + (2:q)]').^2))
-    # else
-    #     Fcij = sqrt(sum((f_2[0*q + (1:q), 1*q + (1:q)] - f_1[0*q + (1:q)] * f_1[1*q + (1:q)]').^2))
-    # end
+
 
 """
-    CliqueDistribution!(clique::clique_type)
+   ReturnPairFreqs(i::Int64, j::Int64, msa::Array{Int64,2}; q=findmax(msa)[1], reweighting=0)
 
-Computes single site and pairwise frequencies for `clique`, using MCSwap sampling.
+Return single point and pairwise frequencies for columns `i` and `j` in input `msa`. `i` is indexed as 1, and `j` as 2.
 """
-function CliqueDistribution!(clique::clique_type)
+function ReturnPairFreqs(i::Int64, j::Int64, msa::Array{Int64,2}; q::Int64=findmax(msa)[1], reweighting=0)
 
-    (clique.sample, n_it) = MCSwap(clique.sample, clique.J, clique.q, verbose = true)
-    
-    (f_1,f_2) = ReturnFreqs(clique.sample, q=clique.q)
+    (M,L) = size(msa)
+    f_2 = zeros(Float64, 2*q, 2*q)
+    f_1 = zeros(Float64, 2*q)
+    # println("sample[1,:] = ", msa[1,:])
+    # println("i = ",i," -- j = ",j)
+    for m in 1:M
+        f_1[0*q+msa[m,i]] += 1
+        f_1[1*q+msa[m,j]] += 1
 
-    return (f_1,f_2)
-end
-
-# """
-#     CliquePairDistribution!(i::Int64, j::Int64, clique::clique_type)
-# Computes single site and pairwise frequencies for sites `i` and `j` in `clique`, using MCSwap sampling.
-# """
-# function CliquePairDistribution!(i,j,clique::clique_type)
-
-#     (sample_n, n_it) = MCSwap(clique.sample, clique.J, clique.q, verbose = true)
-#     clique.sample = sample_n
-#     (f_1,f_2) = ReturnPairFreqs(i,j,clique.sample, q=clique.q)
-
-#     return (f_1,f_2)
-# end
-
-"""
-    TwoNodesFromFull(i::Int64, j::Int64, clique_ref::clique_type)
-
-Remove all nodes from `clique_ref`, except for `i` and `j`. Return clique object.
-"""
-function TwoNodesFromFull(i::Int64, j::Int64, clique_ref::clique_type)
-    M = size(clique_ref.sample)[1]
-    L = clique_ref.L
-    q = clique_ref.q
-
-    clique_out = CliqueCopy(clique_ref)
-    for k in 1:L
-        if k!=i && k!=j
-            clique_out = RemoveNode(clique_out, k)
-        end
+        f_2[0*q+msa[m,i], 0*q+msa[m,i]] += 1
+        f_2[1*q+msa[m,j], 1*q+msa[m,j]] += 1
+        f_2[0*q+msa[m,i], 1*q+msa[m,j]] += 1
+        f_2[1*q+msa[m,j], 0*q+msa[m,i]] += 1
     end
 
-    return clique_out
+    f_2 = f_2./M
+    f_1 = f_1./M
+
+    return (f_1,f_2)
+
 end

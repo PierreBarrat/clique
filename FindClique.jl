@@ -56,9 +56,9 @@ function CliqueFromFull(clique_ref::clique_type, i::Int64, j::Int64 ; file::Stri
     t_clique = clique_ref
 
     # Computing original score -- accounting for finite size and sampling time
-    f0 = CliqueCorr(t_clique.map[i], t_clique.map[j], t_clique)
+    f0 = PairFreq(t_clique.map[i], t_clique.map[j], t_clique)
     MCSwap!(t_clique.sample, t_clique.J, t_clique.q, verbose = false, it_max = 30, random_control = false)
-    freq_init = CliqueCorr(t_clique.map[i], t_clique.map[j], t_clique)
+    freq_init = PairFreq(t_clique.map[i], t_clique.map[j], t_clique)
     score_array[1] = ScoresFromFreqs(freq_init, f0)[1]
     println("Initial score = ", score_array[1])
     WriteLog(file, 0, L, 0, score_array[1],freq_init)
@@ -98,7 +98,7 @@ function RemoveOptNode(clique::clique_type, i::Int64, j::Int64, freq_init::Array
         if k!=mapi && k!=mapj
             RemoveNode!(t_clique,clique, clique.nodes[k])
             MCSwap!(t_clique.sample, t_clique.J, t_clique.q, verbose = false, it_max = 15, random_control = false)
-            freq_array[(k-1)*q+(1:q),:] = CliqueCorr(t_clique.map[i], t_clique.map[j], t_clique)
+            freq_array[(k-1)*q+(1:q),:] = PairFreq(t_clique.map[i], t_clique.map[j], t_clique)
         end
     end
     

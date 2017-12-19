@@ -1,56 +1,5 @@
-include("../Misc/AlignmentStat.jl")
-
-
-
-function MCSwap(sample::Array{Int64,2}, J::Array{Float64,2}, q::Int64 ; it_max::Int64 = 50    , it_min::Int64 = 5 , verbose::Bool=true , random_control::Bool = false)
-
-    (M,L) = size(sample)
-    sample_n = deepcopy(sample)
-
-    tau = floor(Int64,M*L/5)
-
-    # Stop conditions
-    eps = 0.01
-    acc_rate_store = zeros(Float64,it_max)
-    E = zeros(Float64, it_max+1)
-    if random_control
-        sample_rand = ShuffleColumns(sample)
-        hamming_distance = zeros(Float64,it_max)
-        hamming_distance_rand = zeros(Float64,it_max)
-    end
-    flag_max = 5
-    flag = 0
-    
-
-    if verbose
-        print("Starting MCSwap for ",it_max,"x",tau,"iterations ...")
-    end
-    
-    t::Int64 = 1
-    for t in 1:it_max
-        (E[t+1], acc_rate) = DoSwap!(sample_n, J, tau, q)
-        E[t+1] = E[t+1] + E[t]
-        acc_rate_store[t] = acc_rate
-        
-        if random_control
-            DoSwap!(sample_rand, J, tau, q)
-            hamming_distance[t] = sum(sample.!=sample_n) / L / M
-            hamming_distance_rand[t] = sum(sample.!=sample_rand) / L / M
-        end
-    end
-    if(t==it_max)
-        if verbose
-            print("MCSwap : maximum number of iterations reached (",it_max,")")
-        end
-    end
-    if verbose
-        @printf("MCSwap done - number of iterations %d (with %d swaps per iteration)\n", t, tau)
-    end
-    # return(sample_n, t, hamming_distance, hamming_distance_rand, E, sample_rand)
-    return (sample_n,t)
-
-end
-
+"""
+"""
 function MCSwap!(sample::Array{Int64,2}, J::Array{Float64,2}, q::Int64 ; it_max::Int64 = 50    , it_min::Int64 = 5 , verbose::Bool=true , random_control::Bool = false)
 
     (M,L) = size(sample)
@@ -73,7 +22,8 @@ end
 
 
 
-
+"""
+"""
 function DoSwap!(sample::Array{Int64,2}, J::Array{Float64,2}, tau::Int64, q::Int64)
 
     (M,L) = size(sample)
@@ -91,31 +41,77 @@ function DoSwap!(sample::Array{Int64,2}, J::Array{Float64,2}, tau::Int64, q::Int
         i = rand(1:L)
         m1 = rand(1:M)
         m2 = rand(1:M)
-        count::Int64 = 0
-        while(sample[m1,i]==sample[m2,i] && count < 20)
-             i = rand(1:L)
-             m2 = rand(1:M)
-             count+=1
-        end
-        ia = (i-1)*q + sample[m1,i]
-        ib = (i-1)*q + sample[m2,i]
 
-        for j in 1:L
-            @inbounds dE += J[(j-1)*q + sample[m1,j], ia] - J[(j-1)*q + sample[m2,j], ia] # Contribution from moving a from m1 to m2
-            @inbounds dE += J[(j-1)*q + sample[m2,j], ib] - J[(j-1)*q + sample[m1,j], ib] # Contribution from moving b from m2 to m1
-            # @fastmath @inbounds dE += J[(j-1)*q + sample[m1,j], ia] - J[(j-1)*q + sample[m2,j], ia] # Contribution from moving a from m1 to m2
-            # @fastmath @inbounds dE += J[(j-1)*q + sample[m2,j], ib] - J[(j-1)*q + sample[m1,j], ib] # Contribution from moving b from m2 to m1
-        end
-        if (dE < 0 || exp(-dE) > rand(Float64))
-            # println("   --- OK ---")
-            ia = sample[m1,i]
-            sample[m1,i] = sample[m2,i]
-            sample[m2,i] = ia
+        # If move does not change anything, accept it. 
+        if(sample[m1,i]==sample[m2,i])
             n_accept+=1
-            dE_tot += dE
+        else
+            ia = (i-1)*q + sample[m1,i]
+            ib = (i-1)*q + sample[m2,i]
+            for j in 1:L
+                @fastmath @inbounds dE += J[(j-1)*q + sample[m1,j], ia] - J[(j-1)*q + sample[m2,j], ia] # Contribution from moving a from m1 to m2
+                @fastmath @inbounds dE += J[(j-1)*q + sample[m2,j], ib] - J[(j-1)*q + sample[m1,j], ib] # Contribution from moving b from m2 to m1
+            end
+            if (dE < 0 || exp(-dE) > rand(Float64))
+                # println("   --- OK ---")
+                ia = sample[m1,i]
+                sample[m1,i] = sample[m2,i]
+                sample[m2,i] = ia
+                n_accept+=1
+                dE_tot += dE
+            end
         end
     end
 
     return (dE_tot/M, n_accept/tau)
 end
 
+
+# function MCSwap(sample::Array{Int64,2}, J::Array{Float64,2}, q::Int64 ; it_max::Int64 = 50    , it_min::Int64 = 5 , verbose::Bool=true , random_control::Bool = false)
+
+#     (M,L) = size(sample)
+#     sample_n = deepcopy(sample)
+
+#     tau = floor(Int64,M*L/5)
+
+#     # Stop conditions
+#     eps = 0.01
+#     acc_rate_store = zeros(Float64,it_max)
+#     E = zeros(Float64, it_max+1)
+#     if random_control
+#         sample_rand = ShuffleColumns(sample)
+#         hamming_distance = zeros(Float64,it_max)
+#         hamming_distance_rand = zeros(Float64,it_max)
+#     end
+#     flag_max = 5
+#     flag = 0
+    
+
+#     if verbose
+#         print("Starting MCSwap for ",it_max,"x",tau,"iterations ...")
+#     end
+    
+#     t::Int64 = 1
+#     for t in 1:it_max
+#         (E[t+1], acc_rate) = DoSwap!(sample_n, J, tau, q)
+#         E[t+1] = E[t+1] + E[t]
+#         acc_rate_store[t] = acc_rate
+        
+#         if random_control
+#             DoSwap!(sample_rand, J, tau, q)
+#             hamming_distance[t] = sum(sample.!=sample_n) / L / M
+#             hamming_distance_rand[t] = sum(sample.!=sample_rand) / L / M
+#         end
+#     end
+#     if(t==it_max)
+#         if verbose
+#             print("MCSwap : maximum number of iterations reached (",it_max,")")
+#         end
+#     end
+#     if verbose
+#         @printf("MCSwap done - number of iterations %d (with %d swaps per iteration)\n", t, tau)
+#     end
+#     # return(sample_n, t, hamming_distance, hamming_distance_rand, E, sample_rand)
+#     return (sample_n,t)
+
+# end

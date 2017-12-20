@@ -1,4 +1,3 @@
-include("./CliqueAlignmentStat.jl")
 include("./CliqueMCMCSwap.jl")
 include("./CliqueTools.jl")
 
@@ -14,9 +13,9 @@ function CliqueMain(i::Int64, j::Int64, sample::Array{Int64,2}, J::Array{Float64
     clique_tot = clique_type(collect(1:L), sample, J, collect(1:L), q, L)
 
     # Initialize log and freqs files
-    f = open(@sprintf("log_%s",file),"w")
+    f = open(@sprintf("log_%s.txt",file),"w")
     close(f)
-    f = open(@sprintf("freqs_%s",file),"w")
+    f = open(@sprintf("freqs_%s.txt",file),"w")
     close(f)
 
     # Main calculation
@@ -33,11 +32,11 @@ end
 """
 """
 function WriteLog(file::String,k,L,removed_node, score, freq_curr)
-    open(@sprintf("log_%s",file),"a") do f
+    open(@sprintf("log_%s.txt",file),"a") do f
         write(f,@sprintf("It. %d out of %d\n",k,L-2)) 
         write(f,@sprintf("Removed node %d -- New score = %f\n\n", removed_node,score) )
     end
-    open(@sprintf("freqs_%s",file),"a") do f
+    open(@sprintf("freqs_%s.txt",file),"a") do f
         write(f,@sprintf("It. %d out of %d\n",k,L-2)) 
         writedlm(f,freq_curr,' ')
         write(f,@sprintf("\n"))
@@ -51,14 +50,17 @@ Iteratively removes nodes from `clique_ref` keeping the correlation between `i` 
 """
 function CliqueFromFull(clique_ref::clique_type, i::Int64, j::Int64 ; file::String="")
     L = size(clique_ref.sample)[2]
+    n_it::Int64 = 1000
     score_array = zeros(Float64, L-1)
     removed_nodes = zeros(Int64, L-2)
     t_clique = clique_ref
 
     # Computing original score -- accounting for finite size and sampling time
-    f0 = PairFreq(t_clique.map[i], t_clique.map[j], t_clique)
-    MCSwap!(t_clique.sample, t_clique.J, t_clique.q, verbose = false, it_max = 30, random_control = false)
-    freq_init = PairFreq(t_clique.map[i], t_clique.map[j], t_clique)
+    # f0 = PairFreq(t_clique.map[i], t_clique.map[j], t_clique)
+    # MCSwap!(t_clique.sample, t_clique.J, t_clique.q, verbose = false, it_max = 30, random_control = false)
+    # freq_init = PairFreq(t_clique.map[i], t_clique.map[j], t_clique)
+    f0 = SampleFromClique(t_clique.map[i], t_clique.map[j], t_clique,n_it)
+    freq_init = SampleFromClique(t_clique.map[i], t_clique.map[j], t_clique,n_it)
     score_array[1] = ScoresFromFreqs(freq_init, f0)[1]
     println("Initial score = ", score_array[1])
     WriteLog(file, 0, L, 0, score_array[1],freq_init)
@@ -85,20 +87,25 @@ Attempts to remove one node from `clique`. `freq_init` is an array containing pa
 """
 function RemoveOptNode(clique::clique_type, i::Int64, j::Int64, freq_init::Array{Float64,2})
     (M,L) = size(clique.sample)
-    t_clique = CreateZeroClique(L-1, clique.q, M)
-    score_max::Float64 = -1
-    opt_node::Int64 = 0
+    #Conveniencies
     q::Int64 = clique.q
     mapi::Int64 = clique.map[i]
     mapj::Int64 = clique.map[j]
+    # Allocating space
+    t_clique = CreateZeroClique(L-1, clique.q, M)
     freq_array = zeros(Float64,q * L, q)
+    # Parameters
+    n_it::Int64 = 100; # Number of swapping procedures to compute frequencies for one temptative node
+    #Initialisation
+    score_max::Float64 = -1
+    opt_node::Int64 = 0
 
     # Computing pairwise frequencies for all temptative nodes k 
     for k in 1:L
         if k!=mapi && k!=mapj
+            @printf("Node %d/%d...     \r",k,L)
             RemoveNode!(t_clique,clique, clique.nodes[k])
-            MCSwap!(t_clique.sample, t_clique.J, t_clique.q, verbose = false, it_max = 15, random_control = false)
-            freq_array[(k-1)*q+(1:q),:] = PairFreq(t_clique.map[i], t_clique.map[j], t_clique)
+            freq_array[(k-1)*q+(1:q),:] = SampleFromClique(t_clique.map[i], t_clique.map[j], t_clique,n_it)
         end
     end
     

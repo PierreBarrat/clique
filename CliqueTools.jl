@@ -152,3 +152,59 @@ function ReturnPairFreqs(i::Int64, j::Int64, msa::Array{Int64,2}; q::Int64=findm
     return (f_1,f_2)
 
 end
+
+"""
+   ReturnPairFreqs!(f_2::Array{Float64,2},i::Int64, j::Int64, msa::Array{Int64,2}; q=findmax(msa)[1], reweighting=0)
+
+Return single point and pairwise frequencies for columns `i` and `j` in input `msa`. Output is a `qxq` matrix.
+"""
+function ReturnPairFreqs!(f_2::Array{Float64,2}, i::Int64, j::Int64, msa::Array{Int64,2}, q::Int64, reweighting=0)
+
+    (M) = size(msa)[1]
+    eps::Float64 = 1/M
+    # println("sample[1,:] = ", msa[1,:])
+    # println("i = ",i," -- j = ",j)
+    for a = 1:q
+        for b = 1:q
+            f_2[a,b] = 0
+        end
+    end
+    for m in 1:M
+        f_2[msa[m,i], msa[m,j]] += eps
+    end
+
+    # copy!(f_2,f_2/M)
+    # f_2
+
+end
+
+"""
+"""
+function SampleFromClique(i::Int64, j::Int64, clique::clique_type, n_it::Int64)
+    (M,L) = size(clique.sample)
+    # Parameters
+    eqt::Int64 = 200
+    min_n_acc::Int64 = floor(M*L/eqt)
+    #Allocating space
+    freq_out = zeros(Float64,clique.q,clique.q)
+    freq_temp = zeros(Float64,clique.q,clique.q)
+
+    # Estimating reasonnable sampling time
+    tau = EstimateTau(i, j, clique.sample, clique.J, clique.q, min_n_acc)
+    
+    # Equilibrating for eqt tau
+    DoSwap!(clique.sample,clique.J,10*tau,clique.q)
+
+    # Sampling n_it times
+    for it in 1:n_it
+        DoSwap!(clique.sample,clique.J,tau,clique.q)
+        ReturnPairFreqs!(freq_temp,i,j,clique.sample,clique.q)
+        for a = 1:clique.q
+            for b = 1:clique.q
+                freq_out[a,b] = freq_out[a,b] + freq_temp[a,b] / n_it
+            end
+        end
+    end
+    
+    return freq_out
+end

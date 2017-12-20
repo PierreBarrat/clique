@@ -1,3 +1,5 @@
+include("./CliqueTools.jl")
+
 """
 """
 function MCSwap!(sample::Array{Int64,2}, J::Array{Float64,2}, q::Int64 ; it_max::Int64 = 50    , it_min::Int64 = 5 , verbose::Bool=true , random_control::Bool = false)
@@ -20,7 +22,29 @@ function MCSwap!(sample::Array{Int64,2}, J::Array{Float64,2}, q::Int64 ; it_max:
 
 end
 
+"""
+"""
+function EstimateTau(i::Int64, j::Int64, sample::Array{Int64,2}, J::Array{Float64,2}, q::Int64, min_n_acc::Int64)
 
+    (M,L) = size(sample)
+    it_max = convert(Int64,floor(M))*10;
+    n_acc = zeros(Int64, it_max+1)
+    n_acc[1] = 0
+    # min_n_acc = M*L/10;
+
+    step = L;
+    t::Int64 = 1
+    samplew = copy(sample);
+    for t in 1:it_max
+        n_acc[t+1] = DoSwap!(samplew,J,step,q)[2]
+        n_acc[t+1] = n_acc[t+1] + n_acc[t]
+        if n_acc[t+1] > min_n_acc
+            break
+        end
+    end
+    tau = t * L
+    return tau
+end
 
 """
 """
@@ -63,7 +87,7 @@ function DoSwap!(sample::Array{Int64,2}, J::Array{Float64,2}, tau::Int64, q::Int
         end
     end
 
-    return (dE_tot/M, n_accept/tau)
+    return (dE_tot, n_accept)
 end
 
 

@@ -45,7 +45,7 @@ function RemoveNode!(clique_n::clique_type, clique_o::clique_type, k::Int64)
     clique_n.map = copy(clique_o.map)
     clique_n.map[k] = 0
     clique_n.map[(k+1):end] = max(clique_n.map[(k+1):end]-1,0)
-    clique_n.sample = clique_o.sample[:,cat(1,1:(clique_o.map[k]-1),(clique_o.map[k]+1):clique_o.L)]
+#    clique_n.sample = clique_o.sample[:,cat(1,1:(clique_o.map[k]-1),(clique_o.map[k]+1):clique_o.L)]
     for i in 1:(clique_o.map[k]-1)
         for m = 1:Mn
             clique_n.sample[m,i] = clique_o.sample[m,i]

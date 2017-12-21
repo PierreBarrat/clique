@@ -110,6 +110,7 @@ function DoSwapPair!(sample::Array{Int64,2}, J::Array{Float64,2}, tau::Int64, ir
     cols::Array{Int64,1} = [ir,jr]
 
     for t in 1:tau
+    	dE = 0
         i = cols[rand(1:2)]
         m1 = rand(1:M)
         m2 = rand(1:M)

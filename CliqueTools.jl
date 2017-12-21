@@ -45,6 +45,7 @@ function RemoveNode!(clique_n::clique_type, clique_o::clique_type, k::Int64)
     clique_n.map = copy(clique_o.map)
     clique_n.map[k] = 0
     clique_n.map[(k+1):end] = max(clique_n.map[(k+1):end]-1,0)
+    clique_n.sample = clique_o.sample[:,cat(1,1:(clique_o.map[k]-1),(clique_o.map[k]+1):clique_o.L)]
     for i in 1:(clique_o.map[k]-1)
         for m = 1:Mn
             clique_n.sample[m,i] = clique_o.sample[m,i]
@@ -211,7 +212,7 @@ function SampleFromClique!(i::Int64, j::Int64, clique::clique_type, n_it::Int64)
 
     # Estimating reasonnable sampling time
     tau = EstimateTau!(i, j, clique.sample, clique.J, clique.q, min_n_acc) # tau --> M*L/df accepted swaps
-    tau_pair::Int64 = floor(df*tau/L/10) # tau_pair --> M/10 accepted swaps in those columns
+    tau_pair::Int64 = floor(df*tau/L/2) # tau_pair --> M/2 accepted swaps in those columns
     
     # Equilibrating for eqt tau
     eqt::Int64 = floor(df/5) # M*L/5 accepted swaps define eq. time

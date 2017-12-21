@@ -24,9 +24,10 @@ end
 
 """
 """
-function EstimateTau(i::Int64, j::Int64, sample::Array{Int64,2}, J::Array{Float64,2}, q::Int64, min_n_acc::Int64)
+function EstimateTau!(i::Int64, j::Int64, sample::Array{Int64,2}, J::Array{Float64,2}, q::Int64, min_n_acc::Int64)
 
     (M,L) = size(sample)
+    tau::Int64 = 0
     it_max = convert(Int64,floor(M))*10;
     n_acc = zeros(Int64, it_max+1)
     n_acc[1] = 0
@@ -34,15 +35,15 @@ function EstimateTau(i::Int64, j::Int64, sample::Array{Int64,2}, J::Array{Float6
 
     step = L;
     t::Int64 = 1
-    samplew = copy(sample);
+    # samplew = copy(sample);
     for t in 1:it_max
-        n_acc[t+1] = DoSwap!(samplew,J,step,q)[2]
+        n_acc[t+1] = DoSwap!(sample,J,step,q)[2]
         n_acc[t+1] = n_acc[t+1] + n_acc[t]
         if n_acc[t+1] > min_n_acc
             break
         end
     end
-    tau = t * L
+    tau = convert(Int64,t * L)
     return tau
 end
 
@@ -106,10 +107,9 @@ function DoSwapPair!(sample::Array{Int64,2}, J::Array{Float64,2}, tau::Int64, ir
     i::Int64 = 0
     ia::Int64 = 0
     ib::Int64 = 0
-    cols = [ir jr]
+    cols::Array{Int64,1} = [ir,jr]
 
     for t in 1:tau
-        dE = 0
         i = cols[rand(1:2)]
         m1 = rand(1:M)
         m2 = rand(1:M)

@@ -45,7 +45,16 @@ function RemoveNode!(clique_n::clique_type, clique_o::clique_type, k::Int64)
     clique_n.map = copy(clique_o.map)
     clique_n.map[k] = 0
     clique_n.map[(k+1):end] = max(clique_n.map[(k+1):end]-1,0)
-    clique_n.sample = clique_o.sample[:,cat(1,1:(clique_o.map[k]-1),(clique_o.map[k]+1):clique_o.L)]
+    for i in 1:(clique_o.map[k]-1)
+        for m = 1:Mn
+            clique_n.sample[m,i] = clique_o.sample[m,i]
+        end
+    end
+    for i in (clique_o.map[k]+1):clique_o.L
+        for m = 1:Mn
+            clique_n.sample[m,i-1] = clique_o.sample[m,i]
+        end
+    end
 
     for i in 1:Ln
         for j in (i+1):Ln
@@ -54,8 +63,17 @@ function RemoveNode!(clique_n::clique_type, clique_o::clique_type, k::Int64)
             if ic == 0 || jc == 0
                 prinln("problem with mapping")
             end
-            clique_n.J[(i-1)*qn + (1:qn), (j-1)*qn + (1:qn)] = clique_o.J[(ic-1)*qn + (1:qn), (jc-1)*qn + (1:qn)]
-            clique_n.J[(j-1)*qn + (1:qn), (i-1)*qn + (1:qn)] = clique_o.J[(jc-1)*qn + (1:qn), (ic-1)*qn + (1:qn)]
+            # clique_n.J[(i-1)*qn + (1:qn), (j-1)*qn + (1:qn)] .= clique_o.J[(ic-1)*qn + (1:qn), (jc-1)*qn + (1:qn)]
+            # clique_n.J[(j-1)*qn + (1:qn), (i-1)*qn + (1:qn)] .= clique_o.J[(jc-1)*qn + (1:qn), (ic-1)*qn + (1:qn)]
+
+            ### Less memory
+            for b = 1:qn
+                for a = 1:qn
+                    @inbounds clique_n.J[(i-1)*qn + a, (j-1)*qn + b] = clique_o.J[(ic-1)*qn + a, (jc-1)*qn + b]
+                    @inbounds clique_n.J[(j-1)*qn + a, (i-1)*qn + b] = clique_o.J[(jc-1)*qn + a, (ic-1)*qn + b]
+                end
+            end
+            ###
         end
     end
 end
@@ -180,33 +198,48 @@ end
 
 """
 """
-function SampleFromClique(i::Int64, j::Int64, clique::clique_type, n_it::Int64)
+function SampleFromClique!(i::Int64, j::Int64, clique::clique_type, n_it::Int64)
     (M,L) = size(clique.sample)
+    tau::Int64 = 0
     # Parameters
-    df::Int64 = 10 # M*L/df accepted swaps define one iteration
+    n_itp = n_it
+    df::Int64 = 30 # M*L/df accepted swaps define one iteration
     min_n_acc::Int64 = floor(M*L/df)
     #Allocating space
     freq_out = zeros(Float64,clique.q,clique.q)
     freq_temp = zeros(Float64,clique.q,clique.q)
 
     # Estimating reasonnable sampling time
-    tau = EstimateTau(i, j, clique.sample, clique.J, clique.q, min_n_acc)
-    tau_pair::Int64 = floor(2*tau/L)
+    tau = EstimateTau!(i, j, clique.sample, clique.J, clique.q, min_n_acc) # tau --> M*L/df accepted swaps
+    tau_pair::Int64 = floor(df*tau/L/10) # tau_pair --> M/10 accepted swaps in those columns
     
     # Equilibrating for eqt tau
-    eqt::Int64 = tau*df # M*L accepted swaps define eq. time
+    eqt::Int64 = floor(df/5) # M*L/5 accepted swaps define eq. time
     DoSwap!(clique.sample,clique.J,eqt*tau,clique.q)
 
     # Sampling n_it times
     for it in 1:n_it
         DoSwap!(clique.sample,clique.J,tau,clique.q)
-        DoSwapPair!(clique.sample,clique.J,tau_pair,i,j,clique.q)
-        ReturnPairFreqs!(freq_temp,i,j,clique.sample,clique.q)
-        for a = 1:clique.q
-            for b = 1:clique.q
-                freq_out[a,b] = freq_out[a,b] + freq_temp[a,b] / n_it
+        ### No Swapping Pairs
+        # ReturnPairFreqs!(freq_temp,i,j,clique.sample,clique.q)
+        # for a = 1:clique.q
+        #     for b = 1:clique.q
+        #         freq_out[a,b] = freq_out[a,b] + freq_temp[a,b] / n_it 
+        #     end
+        # end
+        ###
+
+        ### Swapping Pairs
+        for itp in 1:n_itp
+            DoSwapPair!(clique.sample,clique.J,tau_pair,i,j,clique.q)
+            ReturnPairFreqs!(freq_temp,i,j,clique.sample,clique.q)
+            for a = 1:clique.q
+                for b = 1:clique.q
+                    freq_out[a,b] = freq_out[a,b] + freq_temp[a,b] / n_it / n_itp
+                end
             end
         end
+        ###
     end
     
     return freq_out

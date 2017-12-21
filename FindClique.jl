@@ -50,7 +50,7 @@ Iteratively removes nodes from `clique_ref` keeping the correlation between `i` 
 """
 function CliqueFromFull(clique_ref::clique_type, i::Int64, j::Int64 ; file::String="")
     L = size(clique_ref.sample)[2]
-    n_it::Int64 = 1000
+    n_it::Int64 = 10
     score_array = zeros(Float64, L-1)
     removed_nodes = zeros(Int64, L-2)
     t_clique = clique_ref
@@ -59,8 +59,8 @@ function CliqueFromFull(clique_ref::clique_type, i::Int64, j::Int64 ; file::Stri
     # f0 = PairFreq(t_clique.map[i], t_clique.map[j], t_clique)
     # MCSwap!(t_clique.sample, t_clique.J, t_clique.q, verbose = false, it_max = 30, random_control = false)
     # freq_init = PairFreq(t_clique.map[i], t_clique.map[j], t_clique)
-    f0 = SampleFromClique(t_clique.map[i], t_clique.map[j], t_clique,n_it)
-    freq_init = SampleFromClique(t_clique.map[i], t_clique.map[j], t_clique,n_it)
+    f0 = SampleFromClique!(t_clique.map[i], t_clique.map[j], t_clique,n_it)
+    freq_init = SampleFromClique!(t_clique.map[i], t_clique.map[j], t_clique,n_it)
     score_array[1] = ScoresFromFreqs(freq_init, f0)[1]
     println("Initial score = ", score_array[1])
     WriteLog(file, 0, L, 0, score_array[1],freq_init)
@@ -95,7 +95,7 @@ function RemoveOptNode(clique::clique_type, i::Int64, j::Int64, freq_init::Array
     t_clique = CreateZeroClique(L-1, clique.q, M)
     freq_array = zeros(Float64,q * L, q)
     # Parameters
-    n_it::Int64 = 10000; # Number of swapping procedures to compute frequencies for one temptative node
+    n_it::Int64 = 10; # Number of swapping procedures to compute frequencies for one temptative node
     #Initialisation
     score_max::Float64 = -1
     opt_node::Int64 = 0
@@ -105,7 +105,7 @@ function RemoveOptNode(clique::clique_type, i::Int64, j::Int64, freq_init::Array
         if k!=mapi && k!=mapj
             @printf("Node %d/%d...     \r",k,L)
             RemoveNode!(t_clique,clique, clique.nodes[k])
-            freq_array[(k-1)*q+(1:q),:] = SampleFromClique(t_clique.map[i], t_clique.map[j], t_clique,n_it)
+            freq_array[(k-1)*q+(1:q),:] = SampleFromClique!(t_clique.map[i], t_clique.map[j], t_clique,n_it)
         end
     end
     
@@ -122,7 +122,7 @@ function RemoveOptNode(clique::clique_type, i::Int64, j::Int64, freq_init::Array
 
     # Removing node and equilibrating sample
     RemoveNode!(t_clique, clique, clique.nodes[opt_node])
-    MCSwap!(t_clique.sample, t_clique.J, t_clique.q, verbose = false, it_max = 15, random_control = false)
+    SampleFromClique!(t_clique.map[i], t_clique.map[j], t_clique,1)
 
     #
     return (t_clique, clique.nodes[opt_node], score_max, freq_array[(opt_node-1)*q+(1:q),:])

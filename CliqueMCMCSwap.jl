@@ -90,6 +90,54 @@ function DoSwap!(sample::Array{Int64,2}, J::Array{Float64,2}, tau::Int64, q::Int
     return (dE_tot, n_accept)
 end
 
+"""
+function DoSwapPair!(sample::Array{Int64,2}, J::Array{Float64,2}, tau::Int64, ir::Int64, jr::Int64, q::Int64)
+
+    Same as `DoSwap!`, but only swaps in columns `ir` and `jr`. `sample` is changed in the process.
+"""
+function DoSwapPair!(sample::Array{Int64,2}, J::Array{Float64,2}, tau::Int64, ir::Int64, jr::Int64, q::Int64)
+
+    (M,L) = size(sample)
+    n_accept::Int64 = 0
+    dE_tot::Float64 = 0
+    dE::Float64 = 0
+    m1::Int64 = 0
+    m2::Int64 = 0
+    i::Int64 = 0
+    ia::Int64 = 0
+    ib::Int64 = 0
+    cols = [ir jr]
+
+    for t in 1:tau
+        dE = 0
+        i = cols[rand(1:2)]
+        m1 = rand(1:M)
+        m2 = rand(1:M)
+
+        # If move does not change anything, accept it. 
+        if(sample[m1,i]==sample[m2,i])
+            n_accept+=1
+        else
+            ia = (i-1)*q + sample[m1,i]
+            ib = (i-1)*q + sample[m2,i]
+            for j in 1:L
+                @fastmath @inbounds dE += J[(j-1)*q + sample[m1,j], ia] - J[(j-1)*q + sample[m2,j], ia] # Contribution from moving a from m1 to m2
+                @fastmath @inbounds dE += J[(j-1)*q + sample[m2,j], ib] - J[(j-1)*q + sample[m1,j], ib] # Contribution from moving b from m2 to m1
+            end
+            if (dE < 0 || exp(-dE) > rand(Float64))
+                # println("   --- OK ---")
+                ia = sample[m1,i]
+                sample[m1,i] = sample[m2,i]
+                sample[m2,i] = ia
+                n_accept+=1
+                dE_tot += dE
+            end
+        end
+    end
+
+    return (dE_tot, n_accept)
+end
+
 
 # function MCSwap(sample::Array{Int64,2}, J::Array{Float64,2}, q::Int64 ; it_max::Int64 = 50    , it_min::Int64 = 5 , verbose::Bool=true , random_control::Bool = false)
 

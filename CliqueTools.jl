@@ -183,21 +183,24 @@ end
 function SampleFromClique(i::Int64, j::Int64, clique::clique_type, n_it::Int64)
     (M,L) = size(clique.sample)
     # Parameters
-    eqt::Int64 = 200
-    min_n_acc::Int64 = floor(M*L/eqt)
+    df::Int64 = 10 # M*L/df accepted swaps define one iteration
+    min_n_acc::Int64 = floor(M*L/df)
     #Allocating space
     freq_out = zeros(Float64,clique.q,clique.q)
     freq_temp = zeros(Float64,clique.q,clique.q)
 
     # Estimating reasonnable sampling time
     tau = EstimateTau(i, j, clique.sample, clique.J, clique.q, min_n_acc)
+    tau_pair::Int64 = floor(2*tau/L)
     
     # Equilibrating for eqt tau
-    DoSwap!(clique.sample,clique.J,10*tau,clique.q)
+    eqt::Int64 = tau*df # M*L accepted swaps define eq. time
+    DoSwap!(clique.sample,clique.J,eqt*tau,clique.q)
 
     # Sampling n_it times
     for it in 1:n_it
         DoSwap!(clique.sample,clique.J,tau,clique.q)
+        DoSwapPair!(clique.sample,clique.J,tau_pair,i,j,clique.q)
         ReturnPairFreqs!(freq_temp,i,j,clique.sample,clique.q)
         for a = 1:clique.q
             for b = 1:clique.q

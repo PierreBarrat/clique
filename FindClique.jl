@@ -95,7 +95,7 @@ function RemoveOptNode(clique::clique_type, i::Int64, j::Int64, freq_init::Array
     t_clique = CreateZeroClique(L-1, clique.q, M)
     freq_array = zeros(Float64,q * L, q)
     # Parameters
-    n_it::Int64 = 100; # Number of swapping procedures to compute frequencies for one temptative node
+    n_it::Int64 = 10000; # Number of swapping procedures to compute frequencies for one temptative node
     #Initialisation
     score_max::Float64 = -1
     opt_node::Int64 = 0

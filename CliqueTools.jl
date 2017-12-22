@@ -212,7 +212,7 @@ function SampleFromClique!(i::Int64, j::Int64, clique::clique_type, n_it::Int64)
 
     # Estimating reasonnable sampling time
     tau = EstimateTau!(i, j, clique.sample, clique.J, clique.q, min_n_acc) # tau --> M*L/df accepted swaps
-    tau_pair::Int64 = floor(df*tau/L/2) # tau_pair --> M/2 accepted swaps in those columns
+    tau_pair::Int64 = floor(df*tau/L/5) # tau_pair --> M/5 accepted swaps in those columns
     
     # Equilibrating for eqt tau
     eqt::Int64 = floor(df/5) # M*L/5 accepted swaps define eq. time

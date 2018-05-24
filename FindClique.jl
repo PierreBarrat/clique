@@ -95,7 +95,7 @@ function RemoveOptNode(clique::clique_type, i::Int64, j::Int64, freq_init::Array
     t_clique = CreateZeroClique(L-1, clique.q, M)
     freq_array = zeros(Float64,q * L, q)
     # Parameters
-    n_it::Int64 = 10; # Number of swapping procedures to compute frequencies for one temptative node
+    n_it::Int64 = 100; # Number of swapping procedures to compute frequencies for one temptative node
     #Initialisation
     score_max::Float64 = -1
     opt_node::Int64 = 0
@@ -134,7 +134,7 @@ end
 
 Computes score for each temptative node. `freq_array` is (`L`*`q` x `q`) and contains measures pairwise frequencies for each removed node. 
 """
-function ScoresFromFreqs(freq_array::Array{Float64,2}, f0::Array{Float64,2}; exclude_gap::Bool = false)
+function ScoresFromFreqs(freq_array::Array{Float64,2}, f0::Array{Float64,2}; exclude_gap::Bool = false, scoretype = "MI")
 
     q::Int64 = size(freq_array)[2]
     L::Int64 = size(freq_array)[1]/q
@@ -145,13 +145,29 @@ function ScoresFromFreqs(freq_array::Array{Float64,2}, f0::Array{Float64,2}; exc
 
     node_scores = zeros(Float64,L);
     for k in 1:L
-        # Minus frobenius norm of difference of correlation matrices. (I want to maximize scores).
-        node_scores[k] = -sqrt(sum( (freq_array[(k-1)*q+(offset:q),(offset:q)] - f0[offset:q,offset:q]).^2 ));
+        if scoretype == "corr"
+            # Minus frobenius norm of difference of correlation matrices. (I want to maximize scores).
+            node_scores[k] = -sqrt(sum( (freq_array[(k-1)*q+(offset:q),(offset:q)] - f0[offset:q,offset:q]).^2 ));
+        elseif scoretype == "MI"
+            node_scores[k] = ComputeMI(freq_array[(k-1)*q+(offset:q),(offset:q)])# - ComputeMI(f0[offset:q,offset:q])
+        end
     end
     return node_scores
 end 
 
+"""
+    ComputeMI(f)
 
+Compute and return mutual information correpsonding to pairwise frequencies in `f`.
+"""
+function ComputeMI(f)
+    q = size(f)[1]
+    pc = 1e-5
+    f = (1-pc)*f + pc/q/q
+    m1 = sum(f,1)
+    m2 = sum(f,2)
+    return sum(f.*log.(f./(m2*m1)))
+end
 
 
 

@@ -44,7 +44,7 @@ function RemoveNode!(clique_n::clique_type, clique_o::clique_type, k::Int64)
     clique_n.nodes = cat(1, clique_o.nodes[1:(kc-1)], clique_o.nodes[(kc+1):end])
     clique_n.map = copy(clique_o.map)
     clique_n.map[k] = 0
-    clique_n.map[(k+1):end] = max(clique_n.map[(k+1):end]-1,0)
+    clique_n.map[(k+1):end] = max.(clique_n.map[(k+1):end]-1,0)
 #    clique_n.sample = clique_o.sample[:,cat(1,1:(clique_o.map[k]-1),(clique_o.map[k]+1):clique_o.L)]
     for i in 1:(clique_o.map[k]-1)
         for m = 1:Mn
@@ -203,8 +203,8 @@ function SampleFromClique!(i::Int64, j::Int64, clique::clique_type, n_it::Int64)
     (M,L) = size(clique.sample)
     tau::Int64 = 0
     # Parameters
-    n_itp = n_it
-    df::Int64 = 30 # M*L/df accepted swaps define one iteration
+    n_itp = max(1,Int64(floor(n_it/10))) # Make some swaps in columns i and j 
+    df::Int64 = min(L,30) # M*L/df accepted swaps define one iteration
     min_n_acc::Int64 = floor(M*L/df)
     #Allocating space
     freq_out = zeros(Float64,clique.q,clique.q)

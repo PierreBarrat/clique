@@ -23,6 +23,9 @@ function MCSwap!(sample::Array{Int64,2}, J::Array{Float64,2}, q::Int64 ; it_max:
 end
 
 """
+    function EstimateTau!(i::Int64, j::Int64, sample::Array{Int64,2}, J::Array{Float64,2}, q::Int64, min_n_acc::Int64)
+
+Estimates reasonnable number of swaps as number of trials to achieve `min_n_acc` accepted moves.
 """
 function EstimateTau!(i::Int64, j::Int64, sample::Array{Int64,2}, J::Array{Float64,2}, q::Int64, min_n_acc::Int64)
 

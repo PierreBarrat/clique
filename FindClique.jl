@@ -95,7 +95,7 @@ function RemoveOptNode(clique::clique_type, i::Int64, j::Int64, freq_init::Array
     t_clique = CreateZeroClique(L-1, clique.q, M)
     freq_array = zeros(Float64,q * L, q)
     # Parameters
-    n_it::Int64 = 100; # Number of swapping procedures to compute frequencies for one temptative node
+    n_it::Int64 = 10; # Number of swapping procedures to compute frequencies for one temptative node
     #Initialisation
     score_max::Float64 = -1
     opt_node::Int64 = 0
@@ -134,7 +134,7 @@ end
 
 Computes score for each temptative node. `freq_array` is (`L`*`q` x `q`) and contains measures pairwise frequencies for each removed node. 
 """
-function ScoresFromFreqs(freq_array::Array{Float64,2}, f0::Array{Float64,2}; exclude_gap::Bool = false, scoretype = "MI")
+function ScoresFromFreqs(freq_array::Array{Float64,2}, f0::Array{Float64,2}; exclude_gap::Bool = true, scoretype = "corr")
 
     q::Int64 = size(freq_array)[2]
     L::Int64 = size(freq_array)[1]/q
@@ -150,6 +150,8 @@ function ScoresFromFreqs(freq_array::Array{Float64,2}, f0::Array{Float64,2}; exc
             node_scores[k] = -sqrt(sum( (freq_array[(k-1)*q+(offset:q),(offset:q)] - f0[offset:q,offset:q]).^2 ));
         elseif scoretype == "MI"
             node_scores[k] = ComputeMI(freq_array[(k-1)*q+(offset:q),(offset:q)])# - ComputeMI(f0[offset:q,offset:q])
+        elseif scoretype == "DKL"
+            computeDKL(f0[offset:q,offset:q], freq_array[(k-1)*q+(offset:q),(offset:q)]))
         end
     end
     return node_scores

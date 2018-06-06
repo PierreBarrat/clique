@@ -203,7 +203,8 @@ function SampleFromClique!(i::Int64, j::Int64, clique::clique_type, n_it::Int64)
     (M,L) = size(clique.sample)
     tau::Int64 = 0
     # Parameters
-    n_itp = max(1,Int64(floor(n_it/10))) # Make some swaps in columns i and j 
+    # n_itp = max(1,Int64(floor(n_it/))) # Make some swaps in columns i and j 
+    n_itp = 1
     df::Int64 = min(L,30) # M*L/df accepted swaps define one iteration
     min_n_acc::Int64 = floor(M*L/df)
     #Allocating space
@@ -212,7 +213,7 @@ function SampleFromClique!(i::Int64, j::Int64, clique::clique_type, n_it::Int64)
 
     # Estimating reasonnable sampling time
     tau = EstimateTau!(i, j, clique.sample, clique.J, clique.q, min_n_acc) # tau --> M*L/df accepted swaps
-    tau_pair::Int64 = floor(df*tau/L/5) # tau_pair --> M/5 accepted swaps in those columns
+    tau_pair::Int64 = floor(df*tau/L/2) # tau_pair --> M/2 accepted swaps in those columns
     
     # Equilibrating for eqt tau
     eqt::Int64 = floor(df/5) # M*L/5 accepted swaps define eq. time
